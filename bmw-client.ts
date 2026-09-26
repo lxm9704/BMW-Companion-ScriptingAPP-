@@ -1,5 +1,5 @@
 import { fetch } from "scripting"
-import { createJSEncrypt } from "./vendor/jsencrypt"
+import JSEncrypt from "./vendor/jsencrypt"
 import type { KnownState, LockState, TireState, VehicleCheck, VehicleSnapshot } from "./domain"
 import { BMW_HEADERS, BMW_HOST, brandUserAgent, COMPAT_HEADERS_X } from "./compat-config"
 import { isSameOrigin, parseHttpsUrl } from "./network-security"
@@ -334,7 +334,6 @@ async function renewGrant(grant: BMWLoginGrant): Promise<BMWSessionSecrets> {
 export async function loginWithPassword(phone: string, password: string): Promise<BMWSessionSecrets> {
   const mobile = normalizedMobile(phone)
   if (!password || password.length > 256) throw new Error("PASSWORD_INVALID")
-  const encryptor = createJSEncrypt()
   const [captcha, publicKeyResponse] = await Promise.all([
     createAndVerifyCaptcha(mobile),
     requestJSON<unknown>("/eadrax-coas/v1/cop/publickey", { method: "GET" }),
@@ -345,6 +344,7 @@ export async function loginWithPassword(phone: string, password: string): Promis
   const { verifyId } = captcha
   const publicKey = requireSuccessData<{ value?: unknown }>(publicKeyResponse, "PUBLIC_KEY").value
   if (typeof publicKey !== "string" || publicKey.length > 16_384) throw new Error("PUBLIC_KEY_INVALID")
+  const encryptor = new JSEncrypt()
   encryptor.setPublicKey(publicKey)
   const encryptedPassword = encryptor.encrypt(password)
   if (!encryptedPassword) throw new Error("PASSWORD_ENCRYPTION_FAILED")

@@ -81,6 +81,11 @@ function errorMessage(error: unknown): string {
     SMS_CODE_INVALID: "请输入收到的短信验证码。",
     NONCE_PROVIDER_REJECTED: "辅助服务暂时不可用，请稍后重试。",
     NONCE_RESPONSE_INVALID: "辅助服务返回异常，请稍后重试。",
+    NONCE_HTTPS_REQUIRED: "辅助服务地址必须使用 HTTPS，请检查服务设置。",
+    NONCE_HTTPS_UNAVAILABLE: "辅助服务 HTTPS 连接失败，请稍后重试或切换服务。",
+    NONCE_CUSTOM_URL_INVALID: "自定义地址无效，必须是不含账号信息的 HTTPS 地址。",
+    SECURE_RANDOM_UNAVAILABLE: "当前 Scripting 版本无法提供安全随机数，已阻止密码登录。",
+    SECURE_RANDOM_INVALID: "安全随机数生成异常，已阻止密码登录。",
     VEHICLE_LIST_EMPTY: "账号下没有读取到车辆。",
     VEHICLE_STATE_INVALID: "车辆状态获取失败，请稍后重试。",
     BMW_HTTP_401: "登录已过期，请在会话管理中退出后重新登录。",
@@ -215,7 +220,7 @@ export function ConnectionPage() {
     const disclosure = getNonceDisclosure()
     const accepted = await Dialog.confirm({
       title: "登录辅助服务",
-      message: `${disclosure.message}\n\n是否同意并继续登录？`,
+      message: `${disclosure.message}\n\n请求将发送至：${disclosure.host}\n\n是否同意并继续登录？`,
       cancelLabel: "不同意",
       confirmLabel: "我同意",
     })

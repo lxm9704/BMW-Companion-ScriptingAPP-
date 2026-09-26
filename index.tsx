@@ -634,7 +634,7 @@ function LocationPage({ showClose = false }: { showClose?: boolean }) {
             accessibilityLabel="关闭 BMW Companion"
           />,
         ] : undefined,
-        topBarTrailing: [
+        topBarTrailing: !privacy ? [
           <Button
             title="更新组件地图"
             systemImage="arrow.triangle.2.circlepath"
@@ -642,7 +642,7 @@ function LocationPage({ showClose = false }: { showClose?: boolean }) {
             fontWeight="semibold"
             foregroundStyle={ACCENT}
           />,
-        ],
+        ] : undefined,
       }}
     >
       <VStack spacing={14} padding={16}>

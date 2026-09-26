@@ -1,4 +1,5 @@
 import { AppIntentManager, AppIntentProtocol, Widget } from "scripting"
+import { removeMapSnapshot } from "./map-snapshot"
 import { loadSettings, recordWidgetReload, saveSettings } from "./storage"
 
 export const RefreshDemoIntent = AppIntentManager.register<void>({
@@ -17,6 +18,9 @@ export const SetPrivacyIntent = AppIntentManager.register<boolean>({
   protocol: AppIntentProtocol.AppIntent,
   perform: async (enabled: boolean) => {
     saveSettings({ ...loadSettings(), privacyMode: enabled })
+    if (enabled) {
+      await removeMapSnapshot()
+    }
     Widget.reloadAll()
   },
 })

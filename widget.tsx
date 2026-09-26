@@ -11,6 +11,7 @@ import {
 import type { VehicleSnapshot } from "./domain"
 import { fetchOfficialCarImage, loadCachedCarImage } from "./bmw-client"
 import { doorWindowStatus, formatSyncTime, lockInfo } from "./formatters"
+import { mapSnapshotPath, removeMapSnapshot } from "./map-snapshot"
 import { refreshConnectedSnapshot } from "./refresh"
 import {
   loadRuntimeMode,
@@ -18,7 +19,6 @@ import {
   loadWidgetSnapshot,
   parseWidgetParameter,
   resolvePrivacy,
-  scriptKeyNamespace,
 } from "./storage"
 
 const ACCENT = "#166DFF"
@@ -452,10 +452,13 @@ function LargeWidget({ snapshot, logo, car, mapImage, privacy }: {
 }
 
 // 读取 App 在「停车位置」页/刷新时生成的 Apple 原生地图快照（App Group 共享目录，组件可读）
-async function loadMapImage(): Promise<UIImage | null> {
+async function loadMapImage(privacy: boolean): Promise<UIImage | null> {
   try {
-    const path = `${FileManager.appGroupDocumentsDirectory}/car-location-map-${scriptKeyNamespace()}.png`
-    return UIImage.fromFile(path)
+    if (privacy) {
+      await removeMapSnapshot()
+      return null
+    }
+    return UIImage.fromFile(mapSnapshotPath())
   } catch {
     return null
   }
@@ -515,7 +518,7 @@ async function main() {
         new Promise<null>(resolve => setTimeout(() => resolve(null), 6000)),
       ])
     }
-    const mapImage = await loadMapImage()
+    const mapImage = await loadMapImage(privacy)
 
     let content
     switch (family) {

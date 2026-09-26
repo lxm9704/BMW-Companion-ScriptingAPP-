@@ -7,6 +7,7 @@ import {
 import { createCompatProviderSignature } from "./compat-signature"
 import { loadSettings, scriptKeyNamespace } from "./storage"
 import type { NonceProviderId } from "./domain"
+import { isSameOrigin, parseHttpsUrl } from "./network-security"
 
 export type NoncePurpose = "login" | "refresh"
 
@@ -20,8 +21,16 @@ function currentProvider(): NonceProviderId {
 }
 
 function providerHost(provider: NonceProviderId): string {
-  if (provider === "custom") return loadSettings().customNonceUrl?.trim() || "自定义地址"
-  return COMPAT_NONCE_HOST
+  if (provider === "custom") {
+    const value = loadSettings().customNonceUrl?.trim()
+    if (!value) return "自定义地址"
+    try {
+      return parseHttpsUrl(value, "NONCE_CUSTOM_URL_INVALID").origin
+    } catch {
+      return "无效的自定义地址"
+    }
+  }
+  return parseHttpsUrl(COMPAT_NONCE_HOST).origin
 }
 
 export function getNonceDisclosure(): { providerId: string; host: string; message: string } {
@@ -98,31 +107,37 @@ export async function requestCompatNonce(
   }
 }
 
-// —— 取号请求：默认 HTTPS，失败（证书过期 / 连接异常）自动降级为 HTTP 重试 ——
+// —— 取号请求：只允许 HTTPS；短暂网络失败时原地重试，绝不降级协议 ——
 async function fetchNonceResponse(
   url: string,
   headers: Record<string, string>,
   debugLabel: string,
 ): Promise<{ ok: boolean; status: number; text(): Promise<string> }> {
-  const send = async (target: string) => {
-    const origin = (target.match(/^https?:\/\/[^/]+/) ?? [target])[0]
-    return await fetch(target, {
-      method: "GET",
-      headers,
-      // 第三方服务偶发较慢（实测有 14s 级响应），超时放宽以免误判失败
-      timeout: 20,
-      handleRedirect: async request => request.url.startsWith(origin) ? request : null,
-      debugLabel,
-    })
+  const parsed = parseHttpsUrl(url, "NONCE_HTTPS_REQUIRED")
+  const expectedOrigin = parsed.origin
+  const target = parsed.toString()
+  let lastError: unknown
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fetch(target, {
+        method: "GET",
+        headers,
+        // 第三方服务偶发较慢（实测有 14s 级响应），超时放宽以免误判失败
+        timeout: 20,
+        handleRedirect: async request =>
+          isSameOrigin(request.url, expectedOrigin) ? request : null,
+        debugLabel,
+      })
+    } catch (error) {
+      lastError = error
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 350))
+      }
+    }
   }
-  try {
-    return await send(url)
-  } catch (error) {
-    const httpUrl = url.replace(/^https:\/\//, "http://")
-    if (httpUrl === url) throw error
-    console.warn(`${debugLabel}: HTTPS 失败，改用 HTTP 重试 —`, error instanceof Error ? error.message : String(error))
-    return await send(httpUrl)
-  }
+
+  throw lastError ?? new Error("NONCE_HTTPS_UNAVAILABLE")
 }
 
 // —— m.qqtlr.com ——
@@ -140,11 +155,11 @@ async function requestQqtlrNonce(normalized: string): Promise<string> {
 
 // —— 自定义地址（自建服务 / 测试）——
 async function requestCustomNonce(normalized: string): Promise<string> {
-  const base = loadSettings().customNonceUrl?.trim()
-  if (!base) throw new Error("NONCE_CUSTOM_URL_MISSING")
-  const separator = base.includes("?") ? "&" : "?"
-  const url = `${base}${separator}phone=${encodeURIComponent(normalized)}`
-  return parseNonceResponse(await fetchNonceResponse(url, { Accept: "*/*" }, "BMW nonce custom"))
+  const raw = loadSettings().customNonceUrl?.trim()
+  if (!raw) throw new Error("NONCE_CUSTOM_URL_MISSING")
+  const url = parseHttpsUrl(raw, "NONCE_CUSTOM_URL_INVALID")
+  url.searchParams.set("phone", normalized)
+  return parseNonceResponse(await fetchNonceResponse(url.toString(), { Accept: "*/*" }, "BMW nonce custom"))
 }
 
 // —— 响应解析：兼容 {code:0, data:"<nonce>"} 与直接返回 nonce 文本 ——

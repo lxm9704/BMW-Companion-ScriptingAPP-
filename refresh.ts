@@ -1,6 +1,6 @@
 import type { VehicleSnapshot } from "./domain"
 import { fetchFirstVehicleSnapshot, renewSession } from "./bmw-client"
-import { refreshMapSnapshot } from "./map-snapshot"
+import { refreshMapSnapshot, removeMapSnapshot } from "./map-snapshot"
 import { loadSession, saveSession } from "./session-vault"
 import { loadSettings, saveConnectedSnapshot, setRuntimeMode } from "./storage"
 
@@ -15,12 +15,15 @@ export async function refreshConnectedSnapshot(): Promise<VehicleSnapshot> {
     usable = await renewSession(session)
     saveSession(usable)
   }
-  const next = await fetchFirstVehicleSnapshot(usable, loadSettings().selectedVin || undefined)
+  const settings = loadSettings()
+  const next = await fetchFirstVehicleSnapshot(usable, settings.selectedVin || undefined)
   saveConnectedSnapshot(next)
   setRuntimeMode("connected")
   // 自动生成停车位置地图快照（离屏渲染），供桌面大号组件使用；不阻塞主流程
-  if (next.location) {
+  if (next.location && !settings.privacyMode) {
     void refreshMapSnapshot(next.location.latitude, next.location.longitude, next.identity.displayName)
+  } else if (settings.privacyMode) {
+    void removeMapSnapshot()
   }
   return next
 }

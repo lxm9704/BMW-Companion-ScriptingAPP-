@@ -7,6 +7,27 @@ export function mapSnapshotPath(): string {
   return `${FileManager.appGroupDocumentsDirectory}/car-location-map-${scriptKeyNamespace()}.png`
 }
 
+export async function removeMapSnapshot(): Promise<void> {
+  const path = mapSnapshotPath()
+  try {
+    const manager = FileManager as any
+    const exists = manager.fileExists ?? manager.exists
+    if (typeof exists === "function" && !exists.call(manager, path)) return
+    const removeSync = manager.removeSync ?? manager.removeItemSync
+    if (typeof removeSync === "function") {
+      removeSync.call(manager, path)
+      return
+    }
+    const remove = manager.remove ?? manager.removeItem
+    if (typeof remove === "function") {
+      await remove.call(manager, path)
+    }
+  } catch (error) {
+    // Missing files are expected; keep cleanup best-effort so logout/privacy never breaks.
+    console.warn("map snapshot cleanup failed:", error instanceof Error ? error.message : String(error))
+  }
+}
+
 // WGS84 经纬度 → Web 墨卡托瓦片坐标（连续值）
 function lonToX(lon: number, z: number): number {
   return (lon + 180) / 360 * Math.pow(2, z)
@@ -95,6 +116,11 @@ export async function refreshMapSnapshot(
   size = { width: 620, height: 440 },
 ): Promise<boolean> {
   const settings = loadSettings()
+  if (settings.privacyMode) {
+    await removeMapSnapshot()
+    Widget.reloadAll()
+    return false
+  }
   // 位置未明显变动（≈44米）时直接复用上次快照，省流量省电
   const latDiff = Math.abs(latitude - (settings.lastMapLocationLat ?? latitude))
   const lngDiff = Math.abs(longitude - (settings.lastMapLocationLng ?? longitude))

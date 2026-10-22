@@ -6,8 +6,11 @@ export const BMW_CLIENT = {
 } as const
 
 export const BMW_HOST = "https://myprofile.bmw.com.cn"
-export const COMPAT_NONCE_HOST = "https://m.qqtlr.com"
-export const COMPAT_NONCE_PATH = "/bmwNonceV5.php"
+
+// 登录验证服务（主通道）
+export const NONCE_HOST = "https://www.widgetc.cn"
+export const NONCE_PATH = "/bmw/api/encryptV5"
+export const NONCE_XUA = "android(29);bmw;5.11.0(48081);cn"
 
 export const BMW_HEADERS: Record<string, string> = {
   "content-type": "application/json; charset=utf-8",

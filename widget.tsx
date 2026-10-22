@@ -22,7 +22,7 @@ import {
 } from "./storage"
 
 const ACCENT = "#166DFF"
-const LOGO_URL = "https://m.qqtlr.com/logo.png"
+const LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/BMW.svg/330px-BMW.svg.png"
 const MINI_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/MINI_logo.svg/330px-MINI_logo.svg.png"
 const CARD_BG = { light: "#F6F8FC", dark: "#111827" } as any
 const SUB_BG = "tertiarySystemBackground"

@@ -1,5 +1,5 @@
 // 版本号与更新日志（用于「更新展示」sheet 与设置页版本号）
-export const CURRENT_VERSION = "0.4.8"
+export const CURRENT_VERSION = "0.4.9"
 
 export interface VersionNote {
   version: string
@@ -10,6 +10,14 @@ export interface VersionNote {
 // 按新→旧排列，最多保留近 5 条（slice 兜底，超出自动截断；发版时也建议删除最旧条目）。
 // 新增版本时在顶部加一条，并把 CURRENT_VERSION 同步更新。
 export const CHANGELOG: VersionNote[] = [
+  {
+    version: "0.4.9",
+    title: "登录服务修复",
+    notes: [
+      "修复登录验证服务不可用导致无法登录的问题",
+      "修复品牌图标无法显示的问题",
+    ],
+  },
   {
     version: "0.4.8",
     title: "登录过期与错误提示优化",

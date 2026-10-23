@@ -1,10 +1,10 @@
 import { fetch } from "scripting"
 import {
   BMW_CLIENT,
-  COMPAT_NONCE_HOST,
-  COMPAT_NONCE_PATH,
+  NONCE_HOST,
+  NONCE_PATH,
+  NONCE_XUA,
 } from "./compat-config"
-import { createCompatProviderSignature } from "./compat-signature"
 import { loadSettings, scriptKeyNamespace } from "./storage"
 import type { NonceProviderId } from "./domain"
 import { isSameOrigin, parseHttpsUrl } from "./network-security"
@@ -17,7 +17,7 @@ export type NoncePurpose = "login" | "refresh"
 
 function currentProvider(): NonceProviderId {
   // 仅剩「主要」与「自定义」；历史设置中的其他值一律回落「主要」
-  return loadSettings().nonceProvider === "custom" ? "custom" : "qqtlr"
+  return loadSettings().nonceProvider === "custom" ? "custom" : "primary"
 }
 
 function providerHost(provider: NonceProviderId): string {
@@ -30,7 +30,7 @@ function providerHost(provider: NonceProviderId): string {
       return "无效的自定义地址"
     }
   }
-  return parseHttpsUrl(COMPAT_NONCE_HOST).origin
+  return parseHttpsUrl(NONCE_HOST).origin
 }
 
 export function getNonceDisclosure(): { providerId: string; host: string; message: string } {
@@ -103,7 +103,7 @@ export async function requestCompatNonce(
 
   switch (currentProvider()) {
     case "custom": return requestCustomNonce(normalized)
-    default: return requestQqtlrNonce(normalized)
+    default: return requestPrimaryNonce(normalized)
   }
 }
 
@@ -140,17 +140,18 @@ async function fetchNonceResponse(
   throw lastError ?? new Error("NONCE_HTTPS_UNAVAILABLE")
 }
 
-// —— m.qqtlr.com ——
-async function requestQqtlrNonce(normalized: string): Promise<string> {
-  const signature = createCompatProviderSignature(normalized)
-  const url = `${COMPAT_NONCE_HOST}${COMPAT_NONCE_PATH}` +
-    `?phone=${encodeURIComponent(normalized)}` +
-    `&k=${encodeURIComponent(signature)}&x=0`
+// —— 主通道 ——
+async function requestPrimaryNonce(normalized: string): Promise<string> {
+  const url = `${NONCE_HOST}${NONCE_PATH}?phone=${encodeURIComponent(normalized)}`
   return parseNonceResponse(await fetchNonceResponse(url, {
-    xua: BMW_CLIENT.userAgent,
-    fkthiefcopy: "Plagiarism/Copying/Server Runaway Interface Deadly Family",
-    author: "MeiDaiSan",
-  }, "BMW nonce qqtlr"))
+    _xua: NONCE_XUA,
+    _nonce: randomBase64(16),
+    "User-Agent": BMW_CLIENT.dartUserAgent,
+    _av: "2.0.5",
+    _sv: "17.6",
+    _chl: "appstore",
+    Accept: "*/*",
+  }, "BMW nonce primary"))
 }
 
 // —— 自定义地址（自建服务 / 测试）——
@@ -188,4 +189,13 @@ async function parseNonceResponse(response: {
     throw new Error("NONCE_RESPONSE_INVALID")
   }
   return nonce
+}
+
+// 客户端随机串（请求头 _nonce 用）
+function randomBase64(nBytes: number): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  const len = Math.ceil((nBytes * 4) / 3)
+  let value = ""
+  for (let i = 0; i < len; i++) value += chars[Math.floor(Math.random() * chars.length)]
+  return value.replace(/=+$/, "") + "=="
 }

@@ -3,9 +3,9 @@ export type KnownState = "closed" | "open" | "unknown"
 export type LockState = "locked" | "unlocked" | "unknown"
 export type ChargingState = "charging" | "complete" | "stopped" | "disconnected" | "unknown"
 export type Freshness = "fresh" | "stale" | "expired" | "missing" | "invalid"
-// 登录 nonce 服务提供方：m.qqtlr.com / 自定义地址（自建服务或测试）
+// 登录 nonce 服务提供方：主要 / 自定义地址（自建服务或测试）
 // 详见 nonce-provider.ts 与设置页「登录验证服务」。
-export type NonceProviderId = "qqtlr" | "custom"
+export type NonceProviderId = "primary" | "custom"
 
 export interface TireState {
   pressureBar?: number

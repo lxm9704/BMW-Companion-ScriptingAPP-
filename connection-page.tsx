@@ -121,7 +121,7 @@ export function ConnectionPage() {
 
   // 登录验证服务（可插拔 nonce 提供方）设置
   const settings0 = loadSettings()
-  const [nonceProvider, setNonceProvider] = useState<NonceProviderId>(settings0.nonceProvider ?? "qqtlr")
+  const [nonceProvider, setNonceProvider] = useState<NonceProviderId>(settings0.nonceProvider ?? "primary")
   const [customNonceUrl, setCustomNonceUrl] = useState(settings0.customNonceUrl ?? "")
   const persistNonceProvider = (value: NonceProviderId) => {
     setNonceProvider(value)
@@ -438,7 +438,7 @@ export function ConnectionPage() {
           title="nonce 服务"
           systemImage="arrow.triangle.2.circlepath"
         >
-          <Text tag="qqtlr">主要（没带伞服务商）</Text>
+          <Text tag="primary">主要</Text>
           <Text tag="custom">自定义</Text>
         </Picker>
         {nonceProvider === "custom" ? (
